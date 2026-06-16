@@ -8,6 +8,8 @@ Drag the subjet axes around a randomly generated jet, switch between 1-/2-/3-pro
 
 **Live demo:** https://nollde.github.io/substructure/
 
+![demo](demo.gif)
+
 ## What it shows
 
 - Particles plotted on the $(\eta, \phi)$ plane, sized by $p_T$ and colored by their nearest subjet axis.
