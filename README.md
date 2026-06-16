@@ -1,0 +1,1 @@
+\tau_N = \frac{1}{d_0} \sum_k p_{T,k} min(\Delta R_{1,k}, \Delta R_{2,k}, ..., \Delta R_{N,k})

@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>τ_N · N-subjettiness, intuitively</title>
+<script>
+window.MathJax = {
+  tex: { inlineMath: [['$','$'],['\\(','\\)']] },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-svg.js"></script>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1f242d;
+    --text: #e6e8ec;
+    --muted: #98a0ad;
+    --accent: #6cc2ff;
+    --good: #7be07b;
+    --bad: #ff7b7b;
+    --grid: #2a2f3a;
+    --axis: #ffd166;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+  }
+  header {
+    padding: 18px 24px 10px;
+    border-bottom: 1px solid #222;
+  }
+  header h1 { margin: 0 0 4px; font-size: 20px; font-weight: 600; }
+  header p { margin: 0; color: var(--muted); font-size: 13px; }
+  main {
+    display: grid;
+    grid-template-columns: 1fr 440px;
+    gap: 16px;
+    padding: 16px 24px 32px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+  .stage {
+    background: var(--panel);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+  }
+  #plot { display: block; width: 100%; height: auto; }
+  .panel {
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel h2 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin: 0 0 10px;
+    font-weight: 600;
+  }
+  .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; }
+  .row label { font-size: 13px; color: var(--muted); min-width: 70px; }
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid #2c313c;
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  button:hover { background: #262c38; }
+  button.active { background: var(--accent); color: #001827; border-color: var(--accent); }
+  button.resample-btn {
+    background: var(--axis);
+    color: #2a1f00;
+    border-color: var(--axis);
+    font-weight: 600;
+  }
+  button.resample-btn:hover { background: #ffdc88; border-color: #ffdc88; }
+  .formula {
+    background: var(--panel-2);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    font-size: 13px;
+    overflow-x: auto;
+  }
+  mjx-container[display="true"] { margin: 4px 0 !important; }
+  .stat {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 6px 0;
+    border-bottom: 1px solid #232833;
+    font-size: 13px;
+  }
+  .stat:last-child { border-bottom: 0; }
+  .stat .k { color: var(--muted); }
+  .stat .v { font-variant-numeric: tabular-nums; font-weight: 600; }
+  .legend { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
+  .hint { font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .explain {
+    grid-column: 1 / -1;
+    background: var(--panel);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 14px;
+  }
+  .explain h2 { font-size: 14px; margin: 14px 0 6px; color: var(--accent); }
+  .explain h2:first-child { margin-top: 0; }
+  .explain p { margin: 6px 0; color: #c9cdd4; }
+  .explain code {
+    background: var(--panel-2); padding: 1px 5px; border-radius: 3px;
+    font-size: 12px;
+  }
+  .axis-label { fill: var(--axis); font-size: 11px; font-family: ui-monospace, monospace; }
+  .partline { stroke: #4a5160; stroke-width: 1; opacity: .55; }
+  .partline.assigned { stroke-opacity: 1; }
+  .grid-line { stroke: var(--grid); stroke-width: 1; }
+  .grid-label { fill: var(--muted); font-size: 10px; font-family: ui-monospace, monospace; }
+  @media (max-width: 900px) {
+    main { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>N-subjettiness ($\tau_N$)</h1>
+  <p>Understand why the N-subjettiness makes sense. You see a random spray of particles (jet). Drag the yellow jet axes, add or remove axes, and watch how $\tau_N$ changes. Try different numbers of subjets, different axes!</p>
+</header>
+
+<main>
+  <div class="stage">
+    <svg id="plot" viewBox="0 0 700 700" preserveAspectRatio="xMidYMid meet"></svg>
+  </div>
+
+  <div>
+    <div class="panel">
+      <h2>Generate Jet — Presets</h2>
+      <div class="row">
+        <button data-preset="qcd">1-prong (QCD)</button>
+        <button data-preset="w">2-prong (W/Z)</button>
+        <button data-preset="top">3-prong (top)</button>
+      </div>
+      <div class="row">
+        <button id="resample" class="resample-btn">Resample</button>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h2>Formula</h2>
+      <div class="formula">
+        $\tau_N = \frac{1}{d_0} \sum_k p_{T,k}\,\min\!\big(\Delta R_{1,k},\,\Delta R_{2,k},\,\dots,\,\Delta R_{N,k}\big)$
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">
+          with $d_0 = R \sum_k p_{T,k}$ and $\Delta R_{a,k}=\sqrt{(\eta_a-\eta_k)^2+(\phi_a-\phi_k)^2}$
+        </div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h2>Subjet axes</h2>
+      <div class="row">
+        <label>N =</label>
+        <button data-n="1">1</button>
+        <button data-n="2">2</button>
+        <button data-n="3">3</button>
+        <button data-n="4">4</button>
+      </div>
+      <div class="hint">Yellow ✕ = subjet axis. Drag to move. Particles are colored by which axis is nearest. Axes start at the optimal positions.</div>
+    </div>
+
+    <div class="panel" style="margin-top:12px">
+      <h2>Live values</h2>
+      <div class="stat"><span class="k" id="tauNlabel">$\tau_N$ &nbsp;<em style="color:var(--axis);font-style:normal">(custom)</em></span><span class="v" id="tauN">—</span></div>
+      <div class="stat"><span class="k">$\tau_1$</span><span class="v" id="tau1">—</span></div>
+      <div class="stat"><span class="k">$\tau_2$</span><span class="v" id="tau2">—</span></div>
+      <div class="stat"><span class="k">$\tau_3$</span><span class="v" id="tau3">—</span></div>
+      <div class="stat"><span class="k">$\tau_2/\tau_1$</span><span class="v" id="r21">—</span></div>
+      <div class="stat"><span class="k">$\tau_3/\tau_2$</span><span class="v" id="r32">—</span></div>
+      <div class="stat"><span class="k">$d_0$</span><span class="v" id="d0">—</span></div>
+      <div class="stat"><span class="k">particles</span><span class="v" id="np">—</span></div>
+    </div>
+  </div>
+
+  <div class="explain">
+    <h2>What is each piece doing?</h2>
+    <p><b>Particles ($k$).</b> A jet is a spray of particles; each has a transverse momentum $p_{T,k}$ and a position in the $(\eta,\phi)$ plane. Bigger circle = harder particle.</p>
+    <p><b>Axes.</b> Pick $N$ candidate subjet axes. For every particle, find the <em>nearest</em> axis in $\Delta R$. That's the $\min(\Delta R_{1,k},\dots,\Delta R_{N,k})$ inside the sum.</p>
+    <p><b>Weighted distance.</b> Multiply that nearest distance by the particle's $p_T$. Hard particles dominate — soft junk barely matters.</p>
+    <p><b>Normalization.</b> Divide by $d_0 = R\sum p_T$ so $\tau_N$ is dimensionless and bounded above by ~1 (with jet radius $R$).</p>
+    <h2>Why does it work?</h2>
+    <p>$\tau_N$ is a "jet's distortion when forced into $N$ blobs." If the jet really has $N$ hard prongs, you can place $N$ axes so every hard particle sits right on one — sum is small, $\tau_N \to 0$. If the jet is one-prong but you force $N=2$, the second axis only catches soft stuff far away — $\tau_2$ stays close to $\tau_1$.</p>
+    <p>This is why <b>ratios</b> are the discriminators: $\tau_2/\tau_1$ small ⇒ 2-prong (W/Z); $\tau_3/\tau_2$ small ⇒ 3-prong (top).</p>
+    <p><b>Try it:</b> Pick the W preset. With $N=1$ a single axis can't cover both prongs — $\tau_1$ is large. Switch to $N=2$ and minimize — both axes lock onto the prongs, $\tau_2$ collapses, ratio $\tau_2/\tau_1$ becomes small. Now try the same on the QCD preset: even at $N=2$ the second axis has nothing to catch, ratio stays close to 1.</p>
+  </div>
+</main>
+
+<footer style="text-align:center;color:var(--muted);font-size:12px;padding:16px 24px 32px">
+  Idea, Planning, and Advising: Dennis Noll &nbsp;·&nbsp; Coding: Claude Code
+</footer>
+
+<script>
+"use strict";
+
+// ---------- Math ----------
+const R_JET = 1.0;     // jet radius in (eta, phi)
+const ETA_RANGE = 1.5; // plot half-extent
+
+function dR(a, b) {
+  const dEta = a.eta - b.eta;
+  const dPhi = a.phi - b.phi;
+  return Math.sqrt(dEta*dEta + dPhi*dPhi);
+}
+
+function computeTau(particles, axes) {
+  if (axes.length === 0 || particles.length === 0) return { tau: NaN, d0: 0, assignment: [] };
+  let d0 = 0;
+  for (const p of particles) d0 += p.pt;
+  d0 *= R_JET;
+  let sum = 0;
+  const assignment = new Array(particles.length);
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    let bestD = Infinity, bestA = 0;
+    for (let a = 0; a < axes.length; a++) {
+      const d = dR(p, axes[a]);
+      if (d < bestD) { bestD = d; bestA = a; }
+    }
+    assignment[i] = bestA;
+    sum += p.pt * bestD;
+  }
+  return { tau: sum / d0, d0, assignment };
+}
+
+// Lloyd's algorithm (pT-weighted) to find local-optimum axes
+function minimizeAxes(particles, axes, iters = 80) {
+  const N = axes.length;
+  if (N === 0) return axes;
+  let cur = axes.map(a => ({ eta: a.eta, phi: a.phi }));
+  for (let it = 0; it < iters; it++) {
+    const sumEta = new Array(N).fill(0);
+    const sumPhi = new Array(N).fill(0);
+    const sumPt  = new Array(N).fill(0);
+    for (const p of particles) {
+      let bestD = Infinity, bestA = 0;
+      for (let a = 0; a < N; a++) {
+        const d = dR(p, cur[a]);
+        if (d < bestD) { bestD = d; bestA = a; }
+      }
+      sumEta[bestA] += p.pt * p.eta;
+      sumPhi[bestA] += p.pt * p.phi;
+      sumPt[bestA]  += p.pt;
+    }
+    let moved = 0;
+    for (let a = 0; a < N; a++) {
+      if (sumPt[a] > 0) {
+        const newEta = sumEta[a] / sumPt[a];
+        const newPhi = sumPhi[a] / sumPt[a];
+        moved += Math.abs(newEta - cur[a].eta) + Math.abs(newPhi - cur[a].phi);
+        cur[a].eta = newEta;
+        cur[a].phi = newPhi;
+      } else {
+        // Empty cluster: kick it to a random hard particle
+        const p = particles[Math.floor(Math.random() * particles.length)];
+        cur[a].eta = p.eta + (Math.random() - 0.5) * 0.05;
+        cur[a].phi = p.phi + (Math.random() - 0.5) * 0.05;
+        moved += 1;
+      }
+    }
+    if (moved < 1e-6) break;
+  }
+  return cur;
+}
+
+// Try several random restarts and keep the best
+function bestAxes(particles, N) {
+  let best = null, bestTau = Infinity;
+  for (let trial = 0; trial < 12; trial++) {
+    let init;
+    if (trial === 0) {
+      // Hard-particle seeding (k-means++ ish)
+      init = seedFromHardParticles(particles, N);
+    } else {
+      init = [];
+      for (let i = 0; i < N; i++) {
+        init.push({
+          eta: (Math.random() - 0.5) * 2 * ETA_RANGE,
+          phi: (Math.random() - 0.5) * 2 * ETA_RANGE,
+        });
+      }
+    }
+    const opt = minimizeAxes(particles, init);
+    const { tau } = computeTau(particles, opt);
+    if (tau < bestTau) { bestTau = tau; best = opt; }
+  }
+  return best;
+}
+
+function seedFromHardParticles(particles, N) {
+  // pick N seeds, the first being the hardest, then farthest-from-existing weighted
+  const sorted = [...particles].sort((a,b) => b.pt - a.pt);
+  const seeds = [{ eta: sorted[0].eta, phi: sorted[0].phi }];
+  while (seeds.length < N) {
+    let bestP = null, bestScore = -Infinity;
+    for (const p of particles) {
+      let minD = Infinity;
+      for (const s of seeds) minD = Math.min(minD, dR(p, s));
+      const score = p.pt * minD;
+      if (score > bestScore) { bestScore = score; bestP = p; }
+    }
+    seeds.push({ eta: bestP.eta, phi: bestP.phi });
+  }
+  return seeds;
+}
+
+// ---------- Jet generators ----------
+function gaussian() {
+  // Box-Muller
+  const u = 1 - Math.random();
+  const v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+function makeProng(cx, cy, hardPt, nSoft, spread) {
+  const parts = [{ eta: cx, phi: cy, pt: hardPt }];
+  for (let i = 0; i < nSoft; i++) {
+    parts.push({
+      eta: cx + gaussian() * spread,
+      phi: cy + gaussian() * spread,
+      pt: 0.05 + Math.random() * 0.5,
+    });
+  }
+  return parts;
+}
+
+function presetQCD() {
+  // Single hard core, lots of soft radiation in a wider cone
+  const parts = makeProng(0.0, 0.0, 6.0, 35, 0.18);
+  // Add an extra mid-soft halo
+  for (let i = 0; i < 15; i++) {
+    parts.push({
+      eta: gaussian() * 0.45,
+      phi: gaussian() * 0.45,
+      pt: 0.02 + Math.random() * 0.25,
+    });
+  }
+  return parts;
+}
+
+function presetW() {
+  // Two well-separated prongs
+  const angle = Math.random() * 2 * Math.PI;
+  const r = 0.55;
+  const x1 =  Math.cos(angle) * r, y1 =  Math.sin(angle) * r;
+  const x2 = -Math.cos(angle) * r, y2 = -Math.sin(angle) * r;
+  let parts = [];
+  parts = parts.concat(makeProng(x1, y1, 4.0, 14, 0.10));
+  parts = parts.concat(makeProng(x2, y2, 3.5, 14, 0.10));
+  // Soft halo between them
+  for (let i = 0; i < 10; i++) {
+    parts.push({
+      eta: gaussian() * 0.4,
+      phi: gaussian() * 0.4,
+      pt: 0.03 + Math.random() * 0.2,
+    });
+  }
+  return parts;
+}
+
+function presetTop() {
+  // Three prongs (b + W → qq), roughly arranged in a triangle
+  const baseAngle = Math.random() * 2 * Math.PI;
+  const angles = [0, 2*Math.PI/3, 4*Math.PI/3].map(a => a + baseAngle);
+  const radii  = [0.55, 0.5, 0.45];
+  const pts    = [4.0, 3.5, 3.0];
+  let parts = [];
+  for (let i = 0; i < 3; i++) {
+    const x = Math.cos(angles[i]) * radii[i];
+    const y = Math.sin(angles[i]) * radii[i];
+    parts = parts.concat(makeProng(x, y, pts[i], 10, 0.09));
+  }
+  for (let i = 0; i < 12; i++) {
+    parts.push({
+      eta: gaussian() * 0.45,
+      phi: gaussian() * 0.45,
+      pt: 0.03 + Math.random() * 0.2,
+    });
+  }
+  return parts;
+}
+
+// ---------- State ----------
+const state = {
+  particles: [],
+  axes: [],
+  N: 2,
+  preset: 'w',
+  optTau: { 1: NaN, 2: NaN, 3: NaN },
+};
+
+function recomputeOptimalTaus() {
+  const p = state.particles;
+  state.optTau = {
+    1: computeTau(p, bestAxes(p, 1)).tau,
+    2: computeTau(p, bestAxes(p, 2)).tau,
+    3: computeTau(p, bestAxes(p, 3)).tau,
+  };
+}
+
+function setN(n) {
+  state.N = n;
+  state.axes = bestAxes(state.particles, n).map(a => ({ ...a }));
+  render();
+}
+
+function loadPreset(name) {
+  state.preset = name;
+  if (name === 'qcd') state.particles = presetQCD();
+  else if (name === 'w') state.particles = presetW();
+  else if (name === 'top') state.particles = presetTop();
+  recomputeOptimalTaus();
+  state.axes = bestAxes(state.particles, state.N).map(a => ({ ...a }));
+  render();
+}
+
+// ---------- Rendering ----------
+const PALETTE = ['#6cc2ff', '#ff9f6c', '#7be07b', '#e07be0', '#ffd166', '#ff7b7b'];
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('plot');
+const VBOX = 700;
+const PAD = 40;
+
+function toScreen(eta, phi) {
+  const range = 2 * ETA_RANGE;
+  const x = PAD + ((eta + ETA_RANGE) / range) * (VBOX - 2*PAD);
+  const y = VBOX - PAD - ((phi + ETA_RANGE) / range) * (VBOX - 2*PAD);
+  return [x, y];
+}
+function fromScreen(x, y) {
+  const range = 2 * ETA_RANGE;
+  const eta = (x - PAD) / (VBOX - 2*PAD) * range - ETA_RANGE;
+  const phi = (VBOX - PAD - y) / (VBOX - 2*PAD) * range - ETA_RANGE;
+  return [eta, phi];
+}
+
+function el(name, attrs = {}) {
+  const e = document.createElementNS(SVG_NS, name);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  return e;
+}
+
+function ptToRadius(pt) {
+  return 2 + Math.sqrt(pt) * 6;
+}
+
+function render() {
+  const { particles, axes, N } = state;
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+  // Background gridlines
+  const gridGroup = el('g');
+  for (let v = -1.5; v <= 1.5 + 1e-9; v += 0.5) {
+    const [x1, y1] = toScreen(v, -ETA_RANGE);
+    const [x2, y2] = toScreen(v,  ETA_RANGE);
+    gridGroup.appendChild(el('line', { x1, y1, x2, y2, class: 'grid-line' }));
+    const [hx1, hy1] = toScreen(-ETA_RANGE, v);
+    const [hx2, hy2] = toScreen( ETA_RANGE, v);
+    gridGroup.appendChild(el('line', { x1: hx1, y1: hy1, x2: hx2, y2: hy2, class: 'grid-line' }));
+  }
+  // Axis labels
+  const [zx, zy] = toScreen(0, -ETA_RANGE);
+  gridGroup.appendChild(el('text', { x: VBOX - PAD + 4, y: zy + 4, class: 'grid-label' })).textContent = 'η';
+  const [_, ty] = toScreen(-ETA_RANGE, 0);
+  const labelTop = el('text', { x: PAD - 8, y: PAD - 8, class: 'grid-label' });
+  labelTop.textContent = 'φ';
+  gridGroup.appendChild(labelTop);
+
+  // Jet circle (radius R=1)
+  const [cx0, cy0] = toScreen(0, 0);
+  const [cx1, _cy1] = toScreen(R_JET, 0);
+  const rPx = cx1 - cx0;
+  gridGroup.appendChild(el('circle', { cx: cx0, cy: cy0, r: rPx, fill: 'none', stroke: '#3a4252', 'stroke-dasharray': '4 4' }));
+  svg.appendChild(gridGroup);
+
+  // Compute assignment
+  const { tau, d0, assignment } = computeTau(particles, axes);
+
+  // Lines from particle to nearest axis
+  const linesGroup = el('g');
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    const a = axes[assignment[i]];
+    if (!a) continue;
+    const [px, py] = toScreen(p.eta, p.phi);
+    const [ax, ay] = toScreen(a.eta, a.phi);
+    const line = el('line', {
+      x1: px, y1: py, x2: ax, y2: ay,
+      class: 'partline assigned',
+      stroke: PALETTE[assignment[i] % PALETTE.length],
+      'stroke-width': Math.max(0.5, Math.min(3, p.pt * 0.6)),
+      opacity: 0.35,
+    });
+    linesGroup.appendChild(line);
+  }
+  svg.appendChild(linesGroup);
+
+  // Particles
+  const partGroup = el('g');
+  for (let i = 0; i < particles.length; i++) {
+    const p = particles[i];
+    const [px, py] = toScreen(p.eta, p.phi);
+    const c = el('circle', {
+      cx: px, cy: py, r: ptToRadius(p.pt),
+      fill: PALETTE[assignment[i] % PALETTE.length],
+      'fill-opacity': 0.75,
+      stroke: '#0a0d12', 'stroke-width': 0.8,
+    });
+    partGroup.appendChild(c);
+  }
+  svg.appendChild(partGroup);
+
+  // Axes — draggable
+  const axGroup = el('g');
+  for (let a = 0; a < axes.length; a++) {
+    const ax = axes[a];
+    const [x, y] = toScreen(ax.eta, ax.phi);
+    const g = el('g', { transform: `translate(${x},${y})`, style: 'cursor: grab' });
+    g.dataset.axisIndex = a;
+    // Halo
+    g.appendChild(el('circle', { cx: 0, cy: 0, r: 14, fill: PALETTE[a % PALETTE.length], 'fill-opacity': 0.12 }));
+    // Cross
+    const sz = 9;
+    g.appendChild(el('line', { x1: -sz, y1: -sz, x2: sz, y2: sz, stroke: 'var(--axis)', 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    g.appendChild(el('line', { x1: -sz, y1:  sz, x2: sz, y2: -sz, stroke: 'var(--axis)', 'stroke-width': 3, 'stroke-linecap': 'round' }));
+    // Big invisible hit circle
+    g.appendChild(el('circle', { cx: 0, cy: 0, r: 20, fill: 'transparent' }));
+    // Label
+    const lbl = el('text', { x: 14, y: -10, class: 'axis-label' });
+    lbl.textContent = `axis ${a+1}`;
+    g.appendChild(lbl);
+    axGroup.appendChild(g);
+
+    g.addEventListener('pointerdown', (ev) => startDrag(ev, a));
+  }
+  svg.appendChild(axGroup);
+
+  // Reuse the cached optimal taus (computed once per particle set)
+  const tau1 = state.optTau[1];
+  const tau2 = state.optTau[2];
+  const tau3 = state.optTau[3];
+
+  setText('tauN', fmt(tau));
+  updateTauNLabel(N);
+  setText('tau1', fmt(tau1));
+  setText('tau2', fmt(tau2));
+  setText('tau3', fmt(tau3));
+  setText('r21',  fmt(tau2/tau1));
+  setText('r32',  fmt(tau3/tau2));
+  setText('d0',   fmt(d0, 2));
+  setText('np',   String(particles.length));
+
+  // Update active button states
+  document.querySelectorAll('button[data-n]').forEach(b => {
+    b.classList.toggle('active', Number(b.dataset.n) === N);
+  });
+  document.querySelectorAll('button[data-preset]').forEach(b => {
+    b.classList.toggle('active', b.dataset.preset === state.preset);
+  });
+}
+
+function fmt(v, d = 3) {
+  if (!isFinite(v)) return '—';
+  return v.toFixed(d);
+}
+function setText(id, v) { document.getElementById(id).textContent = v; }
+
+function updateTauNLabel(N) {
+  const el = document.getElementById('tauNlabel');
+  el.innerHTML = `$\\tau_{${N}}$ &nbsp;<em style="color:var(--axis);font-style:normal">(custom)</em>`;
+  if (window.MathJax && window.MathJax.typesetPromise) {
+    window.MathJax.typesetPromise([el]).catch(() => {});
+  }
+}
+
+// ---------- Drag ----------
+// Listeners are attached to window, not the SVG node, so re-renders that destroy
+// the original SVG element don't break the drag.
+let dragging = null;
+function startDrag(ev, idx) {
+  ev.preventDefault();
+  dragging = { idx };
+  document.body.style.cursor = 'grabbing';
+}
+function onDrag(ev) {
+  if (!dragging) return;
+  const pt = svgPoint(ev.clientX, ev.clientY);
+  const [eta, phi] = fromScreen(pt.x, pt.y);
+  state.axes[dragging.idx].eta = eta;
+  state.axes[dragging.idx].phi = phi;
+  render();
+}
+function endDrag() {
+  if (!dragging) return;
+  dragging = null;
+  document.body.style.cursor = '';
+}
+window.addEventListener('pointermove', onDrag);
+window.addEventListener('pointerup', endDrag);
+window.addEventListener('pointercancel', endDrag);
+
+function svgPoint(clientX, clientY) {
+  const ctm = svg.getScreenCTM().inverse();
+  const p = svg.createSVGPoint();
+  p.x = clientX; p.y = clientY;
+  return p.matrixTransform(ctm);
+}
+
+// ---------- Wire up controls ----------
+document.querySelectorAll('button[data-n]').forEach(b => {
+  b.addEventListener('click', () => setN(Number(b.dataset.n)));
+});
+document.querySelectorAll('button[data-preset]').forEach(b => {
+  b.addEventListener('click', () => loadPreset(b.dataset.preset));
+});
+document.getElementById('resample').addEventListener('click', () => loadPreset(state.preset));
+
+// ---------- Boot ----------
+loadPreset('w');
+setN(2);
+</script>
+</body>
+</html>
